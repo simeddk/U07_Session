@@ -12,10 +12,24 @@ class GAME_API ACMovingPlatform : public AStaticMeshActor
 public:
 	ACMovingPlatform();
 
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+public:
+	void AddActiveTrigger();
+	void RemoveActiveTrigger();
 
 private:
 	UPROPERTY(EditAnywhere)
+		int32 ActiveTrigger = 1;
+
+	UPROPERTY(EditAnywhere)
 		float Speed = 20.f;
 	
+	UPROPERTY(EditAnywhere, meta = (MakeEditWidget))
+		FVector TargetLocation;
+
+private:
+	FVector GlobalStartLocation;
+	FVector GlobalTargetLocation;
 };
