@@ -6,9 +6,12 @@
 UCGameInstance::UCGameInstance(const FObjectInitializer& ObjectInitializer)
 {
 	ConstructorHelpers::FClassFinder<UUserWidget> mainMenuClass(TEXT("/Game/Widgets/WB_MainMenu"));
-
 	if (mainMenuClass.Succeeded())
 		MainMenuClass = mainMenuClass.Class;
+
+	ConstructorHelpers::FClassFinder<UUserWidget> inGameMenuClass(TEXT("/Game/Widgets/WB_InGameMenu"));
+	if (inGameMenuClass.Succeeded())
+		InGameMenuClass = inGameMenuClass.Class;
 }
 
 void UCGameInstance::Init()
@@ -22,9 +25,20 @@ void UCGameInstance::LoadMainMenu()
 
 	MainMenu = CreateWidget<UCMainMenu>(this, MainMenuClass);
 	if (MainMenu == nullptr) return;
-	MainMenu->Setup();
-
+	
 	MainMenu->SetMenuInterface(this);
+	MainMenu->Setup();
+}
+
+void UCGameInstance::LoadInGameMenu()
+{
+	if (InGameMenuClass == nullptr) return;
+
+	UCMenuWidget* ingameMenu = CreateWidget<UCMenuWidget>(this, InGameMenuClass);
+	if (ingameMenu == nullptr) return;
+
+	ingameMenu->SetMenuInterface(this);
+	ingameMenu->Setup();
 }
 
 void UCGameInstance::Host()
@@ -43,6 +57,9 @@ void UCGameInstance::Host()
 
 void UCGameInstance::Join(const FString& InAddress)
 {
+	if (!!MainMenu)
+		MainMenu->Teardown();
+
 	UEngine* engine = GetEngine();
 	if (engine == nullptr) return;
 	engine->AddOnScreenDebugMessage(0, 2, FColor::Green, FString::Printf(TEXT("Join to %s"), *InAddress));
@@ -50,4 +67,11 @@ void UCGameInstance::Join(const FString& InAddress)
 	APlayerController* controller = GetFirstLocalPlayerController();
 	if (controller == nullptr) return;
 	controller->ClientTravel(InAddress, ETravelType::TRAVEL_Absolute);
+}
+
+void UCGameInstance::LoadMainMenuLevel()
+{
+	APlayerController* controller = GetFirstLocalPlayerController();
+	if (controller == nullptr) return;
+	controller->ClientTravel("/Game/Maps/MainMenu", ETravelType::TRAVEL_Absolute);
 }

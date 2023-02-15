@@ -1,6 +1,7 @@
 #include "CMainMenu.h"
 #include "Components/Button.h"
 #include "Components/WidgetSwitcher.h"
+#include "Components/EditableTextBox.h"
 
 bool UCMainMenu::Initialize()
 {
@@ -16,46 +17,29 @@ bool UCMainMenu::Initialize()
 	if (CancelJoinMenuButton == nullptr) return false;
 	CancelJoinMenuButton->OnClicked.AddDynamic(this, &UCMainMenu::OpenMainMenu);
 
+	if (ConfirmJoinMenuButton == nullptr) return false;
+	ConfirmJoinMenuButton->OnClicked.AddDynamic(this, &UCMainMenu::JoinServer);
+
+	if (QuitButton == nullptr) return false;
+	QuitButton->OnClicked.AddDynamic(this, &UCMainMenu::QuitPressed);
+
 	return true;
-}
-
-void UCMainMenu::Setup()
-{
-	AddToViewport();
-	bIsFocusable = true;
-
-	FInputModeUIOnly inpuMode;
-	inpuMode.SetWidgetToFocus(TakeWidget());
-	inpuMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-
-	UWorld* world = GetWorld();
-	if (world == nullptr) return;
-
-	APlayerController* controller = world->GetFirstPlayerController();
-	if (controller == nullptr) return;
-	controller->SetInputMode(inpuMode);
-	controller->bShowMouseCursor = true;
-}
-
-void UCMainMenu::Teardown()
-{
-	RemoveFromParent();
-	bIsFocusable = false;
-
-	FInputModeGameOnly inpuMode;
-
-	UWorld* world = GetWorld();
-	if (world == nullptr) return;
-
-	APlayerController* controller = world->GetFirstPlayerController();
-	if (controller == nullptr) return;
-	controller->SetInputMode(inpuMode);
-	controller->bShowMouseCursor = false;
 }
 
 void UCMainMenu::HostServer()
 {
-	MenuInterface->Host();
+	if (!!MenuInterface)
+		MenuInterface->Host();
+}
+
+void UCMainMenu::JoinServer()
+{
+	if (!!MenuInterface)
+	{
+		if (IPAddressField == nullptr) return;
+		const FString& address = IPAddressField->GetText().ToString();
+		MenuInterface->Join(address);
+	}
 }
 
 void UCMainMenu::OpenJoinMenu()
@@ -72,4 +56,15 @@ void UCMainMenu::OpenMainMenu()
 	if (MainMenu == nullptr) return;
 
 	MenuSwitcher->SetActiveWidget(MainMenu);
+}
+
+void UCMainMenu::QuitPressed()
+{
+	UWorld* world = GetWorld();
+	if (world == nullptr) return;
+
+	APlayerController* controller = world->GetFirstPlayerController();
+	if (controller == nullptr) return;
+
+	controller->ConsoleCommand("Quit");
 }
