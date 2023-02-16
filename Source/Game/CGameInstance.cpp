@@ -2,6 +2,10 @@
 #include "Engine/Engine.h"
 #include "Blueprint/UserWidget.h"
 #include "Widgets/CMainMenu.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "OnlineSessionSettings.h"
+
+const static FName SESSION_NAME = TEXT("GameSession");
 
 UCGameInstance::UCGameInstance(const FObjectInitializer& ObjectInitializer)
 {
@@ -16,7 +20,23 @@ UCGameInstance::UCGameInstance(const FObjectInitializer& ObjectInitializer)
 
 void UCGameInstance::Init()
 {
+	IOnlineSubsystem* oss = IOnlineSubsystem::Get();
+	if (!!oss)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OSS Pointer Found. Name : %s"), *oss->GetSubsystemName().ToString());
 
+		SessionInterface = oss->GetSessionInterface();
+
+		if (SessionInterface.IsValid())
+		{
+			SessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnCreateSessionComplete);
+			SessionInterface->OnDestroySessionCompleteDelegates.AddUObject(this, &UCGameInstance::OnDestroySessionComplete);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Not Found OSS"));
+	}
 }
 
 void UCGameInstance::LoadMainMenu()
@@ -43,16 +63,28 @@ void UCGameInstance::LoadInGameMenu()
 
 void UCGameInstance::Host()
 {
-	if (!!MainMenu)
-		MainMenu->Teardown();
+	if (SessionInterface.IsValid())
+	{
+		auto exsistingSession = SessionInterface->GetNamedSession(SESSION_NAME);
 
-	UEngine* engine = GetEngine();
-	if (engine == nullptr) return;
-	engine->AddOnScreenDebugMessage(0, 2, FColor::Green, TEXT("Host"));
+		if (!!exsistingSession)
+		{
+			SessionInterface->DestroySession(SESSION_NAME);
+		}
+		else
+		{
+			CreateSession();
+		}
+	}
+}
 
-	UWorld* world = GetWorld();
-	if (world == nullptr) return;
-	world->ServerTravel("/Game/Maps/Play?listen");
+void UCGameInstance::CreateSession()
+{
+	if (SessionInterface.IsValid())
+	{
+		FOnlineSessionSettings sessionSettings;
+		SessionInterface->CreateSession(0, SESSION_NAME, sessionSettings);
+	}
 }
 
 void UCGameInstance::Join(const FString& InAddress)
@@ -74,4 +106,32 @@ void UCGameInstance::LoadMainMenuLevel()
 	APlayerController* controller = GetFirstLocalPlayerController();
 	if (controller == nullptr) return;
 	controller->ClientTravel("/Game/Maps/MainMenu", ETravelType::TRAVEL_Absolute);
+}
+
+void UCGameInstance::OnCreateSessionComplete(FName InSessionName, bool InSuccess)
+{
+	if (InSuccess == false)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could Not Create Session!!"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("SessionName : %s"), *InSessionName.ToString());
+
+	if (!!MainMenu)
+		MainMenu->Teardown();
+
+	UEngine* engine = GetEngine();
+	if (engine == nullptr) return;
+	engine->AddOnScreenDebugMessage(0, 2, FColor::Green, TEXT("Host"));
+
+	UWorld* world = GetWorld();
+	if (world == nullptr) return;
+	world->ServerTravel("/Game/Maps/Play?listen");
+}
+
+void UCGameInstance::OnDestroySessionComplete(FName InSessionName, bool InSuccess)
+{
+	if (InSuccess == true)
+		CreateSession();
 }
