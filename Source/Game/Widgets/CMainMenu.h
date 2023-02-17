@@ -10,7 +10,12 @@ class GAME_API UCMainMenu : public UCMenuWidget
 	GENERATED_BODY()
 
 public:
+	UCMainMenu(const FObjectInitializer& ObjectInitializer);
+
 	virtual bool Initialize() override;
+
+	void SetServerList(TArray<FString> InServerNames);
+	void SetSelectedIndex(uint32 Index);
 
 private:
 	UFUNCTION()
@@ -54,5 +59,9 @@ private:
 		class UWidget* MainMenu;
 
 	UPROPERTY(meta = (BindWidget))
-		class UEditableTextBox* IPAddressField;
+		class UPanelWidget* ServerList;
+
+private:
+	TSubclassOf<class UUserWidget> ServerRowClass;
+	TOptional<uint32> SelectedIndex;
 };

@@ -28,10 +28,13 @@ public:
 		void Join(const FString& InAddress) override;
 
 	void LoadMainMenuLevel() override;
+	
+	void RefreshServerList() override;
 
 private:
 	void OnCreateSessionComplete(FName InSessionName, bool InSuccess);
 	void OnDestroySessionComplete(FName InSessionName, bool InSuccess);
+	void OnFindSessionsComplete(bool InSuccess);
 
 	void CreateSession();
 
@@ -42,4 +45,5 @@ private:
 	class UCMainMenu* MainMenu;
 
 	IOnlineSessionPtr SessionInterface;
+	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
 };
