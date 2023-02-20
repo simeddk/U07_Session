@@ -41,17 +41,21 @@ void UCMainMenu::HostServer()
 		MenuInterface->Host();
 }
 
-void UCMainMenu::SetServerList(TArray<FString> InServerNames)
+void UCMainMenu::SetServerList(TArray<FServerData> InServerNames)
 {
 	ServerList->ClearChildren();
 
 	uint32 i = 0;
-	for (const FString& serverName : InServerNames)
+	for (const FServerData& serverData : InServerNames)
 	{
 		UCServerRow* row = CreateWidget<UCServerRow>(this, ServerRowClass);
 		if (row == nullptr) return;
 
-		row->ServerName->SetText(FText::FromString(serverName));
+		row->ServerName->SetText(FText::FromString(serverData.Name));
+		row->HostUser->SetText(FText::FromString(serverData.HostUserName));
+		FString fractionText = FString::Printf(TEXT("%d/%d"), serverData.CurrentPlayers, serverData.MaxPlayers);
+		row->ConnectionFraction->SetText(FText::FromString(fractionText));
+
 		row->Setup(this, i++);
 
 		ServerList->AddChild(row);
@@ -61,25 +65,22 @@ void UCMainMenu::SetServerList(TArray<FString> InServerNames)
 void UCMainMenu::SetSelectedIndex(uint32 Index)
 {
 	SelectedIndex = Index;
+
+	UpdateChildren();
 }
 
 void UCMainMenu::JoinServer()
 {
-	if (SelectedIndex.IsSet())
+	if (SelectedIndex.IsSet() && !!MenuInterface)
 	{
 		UE_LOG(LogTemp, Display, TEXT("Selected Index : %d"), SelectedIndex.GetValue());
+		MenuInterface->Join(SelectedIndex.GetValue());
 	}
 	else
 	{
 		UE_LOG(LogTemp, Display, TEXT("Selected Index is not set"));
 	}
 
-	if (!!MenuInterface)
-	{
-		/*if (IPAddressField == nullptr) return;
-		const FString& address = IPAddressField->GetText().ToString();*/
-		MenuInterface->Join("");
-	}
 }
 
 void UCMainMenu::OpenJoinMenu()
@@ -112,4 +113,17 @@ void UCMainMenu::QuitPressed()
 	if (controller == nullptr) return;
 
 	controller->ConsoleCommand("Quit");
+}
+
+void UCMainMenu::UpdateChildren()
+{
+	for (int32 i = 0; i < ServerList->GetChildrenCount(); i++)
+	{
+		UCServerRow* serverRow = Cast<UCServerRow>(ServerList->GetChildAt(i));
+		if (!!serverRow)
+		{
+			serverRow->bSelected = (SelectedIndex.IsSet()) && (SelectedIndex.GetValue() == i);
+		}
+	}
+
 }

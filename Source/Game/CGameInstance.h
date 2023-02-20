@@ -4,6 +4,7 @@
 #include "Engine/GameInstance.h"
 #include "Widgets/IMenuInterface.h"
 #include "OnlineSubsystem.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "CGameInstance.generated.h"
 
 UCLASS()
@@ -25,7 +26,7 @@ public:
 		void Host() override;
 
 	UFUNCTION(Exec)
-		void Join(const FString& InAddress) override;
+		void Join(uint32 Index) override;
 
 	void LoadMainMenuLevel() override;
 	
@@ -35,6 +36,7 @@ private:
 	void OnCreateSessionComplete(FName InSessionName, bool InSuccess);
 	void OnDestroySessionComplete(FName InSessionName, bool InSuccess);
 	void OnFindSessionsComplete(bool InSuccess);
+	void OnJoinSessionComplete(FName InSessionName, EOnJoinSessionCompleteResult::Type InResult);
 
 	void CreateSession();
 
