@@ -43,6 +43,9 @@ private:
 		void OpenMainMenu();
 
 	UFUNCTION()
+		void OpenHostMenu();
+
+	UFUNCTION()
 		void QuitPressed();
 
 private:
@@ -75,6 +78,18 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 		class UPanelWidget* ServerList;
+
+	UPROPERTY(meta = (BindWidget))
+		class UWidget* HostMenu;
+
+	UPROPERTY(meta = (BindWidget))
+		class UEditableTextBox* ServerHostName;
+
+	UPROPERTY(meta = (BindWidget))
+		class UButton* CancelHostMenuButton;
+
+	UPROPERTY(meta = (BindWidget))
+		class UButton* ConfirmHostMenuButton;
 
 private:
 	TSubclassOf<class UUserWidget> ServerRowClass;

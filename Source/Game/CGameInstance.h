@@ -23,7 +23,7 @@ public:
 		void LoadInGameMenu();
 	
 	UFUNCTION(Exec)
-		void Host() override;
+		void Host(FString InServerName) override;
 
 	UFUNCTION(Exec)
 		void Join(uint32 Index) override;
@@ -32,11 +32,14 @@ public:
 	
 	void RefreshServerList() override;
 
+	void StartSession();
+
 private:
 	void OnCreateSessionComplete(FName InSessionName, bool InSuccess);
 	void OnDestroySessionComplete(FName InSessionName, bool InSuccess);
 	void OnFindSessionsComplete(bool InSuccess);
 	void OnJoinSessionComplete(FName InSessionName, EOnJoinSessionCompleteResult::Type InResult);
+	void OnNetworkFailure(UWorld* InWorld, UNetDriver* InNetDriver, ENetworkFailure::Type InType, const FString& ErrorString);
 
 	void CreateSession();
 
@@ -48,4 +51,6 @@ private:
 
 	IOnlineSessionPtr SessionInterface;
 	TSharedPtr<class FOnlineSessionSearch> SessionSearch;
+
+	FString DesiredServerName;
 };
