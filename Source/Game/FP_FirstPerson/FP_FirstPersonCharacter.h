@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "CGameState.h"
 #include "FP_FirstPersonCharacter.generated.h"
 
 class UInputComponent;
@@ -29,12 +30,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	UAnimMontage* FireAnimation;
 
+	UPROPERTY(VisibleDefaultsOnly, Category = Gameplay)
+		class UParticleSystemComponent* FP_GunShotParticle;
+
 	//TP
 	UPROPERTY(VisibleDefaultsOnly, Category = Mesh)
 		USkeletalMeshComponent* TP_Gun;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 		UAnimMontage* TP_FireAnimation;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = Gameplay)
+		class UParticleSystemComponent* TP_GunShotParticle;
 
 public:
 	AFP_FirstPersonCharacter();
@@ -58,7 +65,25 @@ public:
 	float WeaponDamage;
 
 protected:
+	void BeginPlay() override;
+
 	void OnFire();
+	
+	UFUNCTION(Server, Reliable)
+		void OnServerFire(const FVector& LineStart, const FVector& LineEnd);
+	void OnServerFire_Implementation(const FVector& LineStart, const FVector& LineEnd);
+
+	UFUNCTION(NetMulticast, Unreliable)
+		void MulticastFireEffect();
+	void MulticastFireEffect_Implementation();
+
+
+public:
+	UFUNCTION(NetMulticast, Reliable)
+		void SetTeamColor(ETeamType InTeamType);
+	void SetTeamColor_Implementation(ETeamType InTeamType);
+
+protected:
 	void MoveForward(float Val);
 	void MoveRight(float Val);
 	void TurnAtRate(float Rate);
@@ -73,20 +98,11 @@ public:
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return FP_Mesh; }
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return Camera; }
 
-
 public:
-	UFUNCTION(Reliable, Server)
-		void OnServer();
-	
-	UFUNCTION(NetMulticast, Reliable)
-		void OnNetMulticast();
-
-	UFUNCTION(Client, Reliable)
-		void OnClient();
-
-	int32 RandomValue_NoReplicated;
-
 	UPROPERTY(Replicated)
-		int32 RandomValue_Replicated;
+		ETeamType CurrentTeam;
+
+private:
+	class UMaterialInstanceDynamic* DynamicMaterial;
 };
 

@@ -1,5 +1,6 @@
 #include "FP_FirstPersonCharacter.h"
 #include "Global.h"
+#include "CBullet.h"
 #include "Animation/AnimInstance.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -7,10 +8,18 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 #define COLLISION_WEAPON		ECC_GameTraceChannel1
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
+
+void AFP_FirstPersonCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AFP_FirstPersonCharacter, CurrentTeam);
+}
 
 AFP_FirstPersonCharacter::AFP_FirstPersonCharacter()
 {
@@ -45,6 +54,25 @@ AFP_FirstPersonCharacter::AFP_FirstPersonCharacter()
 	TP_Gun = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TP_Gun"));
 	TP_Gun->SetupAttachment(GetMesh(), TEXT("hand_rSocket"));
 	TP_Gun->SetOwnerNoSee(true);
+
+	FP_GunShotParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("FP_GunShotParticle"));
+	FP_GunShotParticle->bAutoActivate = false;
+	FP_GunShotParticle->SetupAttachment(FP_Gun, "Muzzle");
+	FP_GunShotParticle->SetOnlyOwnerSee(true);
+
+	TP_GunShotParticle = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("TP_GunShotParticle"));
+	TP_GunShotParticle->bAutoActivate = false;
+	TP_GunShotParticle->SetupAttachment(TP_Gun, "Muzzle");
+	TP_GunShotParticle->SetOwnerNoSee(true);
+}
+
+
+void AFP_FirstPersonCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (HasAuthority() == false)
+		SetTeamColor(CurrentTeam);
 }
 
 void AFP_FirstPersonCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -62,13 +90,9 @@ void AFP_FirstPersonCharacter::SetupPlayerInputComponent(class UInputComponent* 
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AFP_FirstPersonCharacter::LookUpAtRate);
 }
 
+
 void AFP_FirstPersonCharacter::OnFire()
 {
-	if (FireSound != NULL)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
-	}
-
 	if (FireAnimation != NULL)
 	{
 		UAnimInstance* AnimInstance = FP_Mesh->GetAnimInstance();
@@ -77,6 +101,9 @@ void AFP_FirstPersonCharacter::OnFire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
+
+	if (!!FP_GunShotParticle)
+		FP_GunShotParticle->Activate(true);
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	
@@ -104,8 +131,52 @@ void AFP_FirstPersonCharacter::OnFire()
 		DamagedComponent->AddImpulseAtLocation(ShootDir * WeaponDamage, Impact.Location);
 	}
 
-	OnServer();
+	OnServerFire(StartTrace, EndTrace);
 		
+}
+
+void AFP_FirstPersonCharacter::OnServerFire_Implementation(const FVector& LineStart, const FVector& LineEnd)
+{
+	MulticastFireEffect();
+}
+
+void AFP_FirstPersonCharacter::MulticastFireEffect_Implementation()
+{
+	if (!!TP_FireAnimation)
+	{
+		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
+		if (!!animInstance)
+		{
+			animInstance->Montage_Play(TP_FireAnimation);
+		}
+	}
+
+	if (FireSound != NULL)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
+	}
+
+	if (!!TP_GunShotParticle)
+		TP_GunShotParticle->Activate(true);
+
+	GetWorld()->SpawnActor<ACBullet>(ACBullet::StaticClass(), FP_Gun->GetSocketLocation("Muzzle"), GetControlRotation());
+}
+
+void AFP_FirstPersonCharacter::SetTeamColor_Implementation(ETeamType InTeamType)
+{
+	FLinearColor color;
+	if (InTeamType == ETeamType::Red)
+		color = FLinearColor(0.5f, 0.f, 0.f);
+	else
+		color = FLinearColor(0.f, 0.f, 0.5f);
+
+	if (DynamicMaterial == nullptr)
+	{
+		DynamicMaterial = UMaterialInstanceDynamic::Create(GetMesh()->GetMaterial(0), nullptr);
+		DynamicMaterial->SetVectorParameterValue("BodyColor", color);
+		GetMesh()->SetMaterial(0, DynamicMaterial);
+		FP_Mesh->SetMaterial(0, DynamicMaterial);
+	}
 }
 
 void AFP_FirstPersonCharacter::MoveForward(float Value)
@@ -145,52 +216,3 @@ FHitResult AFP_FirstPersonCharacter::WeaponTrace(const FVector& StartTrace, cons
 	return Hit;
 }
 
-
-void AFP_FirstPersonCharacter::OnServer_Implementation()
-{
-	//CLog::Print("Only Called On Server");
-	OnNetMulticast();
-	OnClient();
-	
-	RandomValue_Replicated++;
-}
-
-
-void AFP_FirstPersonCharacter::OnNetMulticast_Implementation()
-{
-	//CLog::Print("NetMulticast Calded");
-
-	/*if (GetLocalRole() == ENetRole::ROLE_Authority)
-		CLog::Print("ROLE_Authority In NetMulticast", -1, 10, FColor::Purple);
-
-	if (GetLocalRole() == ENetRole::ROLE_AutonomousProxy)
-		CLog::Print("ROLE_AutonomousProxy In NetMulticast", -1, 10, FColor::Purple);
-
-	if (GetLocalRole() == ENetRole::ROLE_SimulatedProxy)
-		CLog::Print("ROLE_SimulatedProxy In NetMulticast", -1, 10, FColor::Purple);*/
-
-	CLog::Print("NoReplicated : " + FString::FromInt(RandomValue_NoReplicated));
-	CLog::Print("Replicated : " + FString::FromInt(RandomValue_Replicated));
-}
-
-void AFP_FirstPersonCharacter::OnClient_Implementation()
-{
-	//CLog::Print("Only Called On Client");
-
-	/*if (GetLocalRole() == ENetRole::ROLE_Authority)
-		CLog::Print("ROLE_Authority In Client");
-
-	if (GetLocalRole() == ENetRole::ROLE_AutonomousProxy)
-		CLog::Print("ROLE_AutonomousProxy In Client");
-
-	if (GetLocalRole() == ENetRole::ROLE_SimulatedProxy)
-		CLog::Print("ROLE_SimulatedProxy In Client");*/
-
-	RandomValue_NoReplicated++;
-}
-
-void AFP_FirstPersonCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AFP_FirstPersonCharacter, RandomValue_Replicated);
-}

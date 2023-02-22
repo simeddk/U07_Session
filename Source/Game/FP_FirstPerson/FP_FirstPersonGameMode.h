@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -13,6 +11,9 @@ class AFP_FirstPersonGameMode : public AGameModeBase
 
 public:
 	AFP_FirstPersonGameMode();
+
+	virtual void BeginPlay() override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 };
 
 
