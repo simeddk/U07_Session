@@ -73,5 +73,20 @@ public:
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return FP_Mesh; }
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return Camera; }
 
+
+public:
+	UFUNCTION(Reliable, Server)
+		void OnServer();
+	
+	UFUNCTION(NetMulticast, Reliable)
+		void OnNetMulticast();
+
+	UFUNCTION(Client, Reliable)
+		void OnClient();
+
+	int32 RandomValue_NoReplicated;
+
+	UPROPERTY(Replicated)
+		int32 RandomValue_Replicated;
 };
 
