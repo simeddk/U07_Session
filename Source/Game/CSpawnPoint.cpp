@@ -1,6 +1,7 @@
 #include "CSpawnPoint.h"
 #include "Global.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/PlayerStart.h"
 
 ACSpawnPoint::ACSpawnPoint()
 {
@@ -14,8 +15,12 @@ void ACSpawnPoint::BeginPlay()
 {
 	Super::BeginPlay();
 
-	OnActorBeginOverlap.AddDynamic(this, &ACSpawnPoint::OnActorBeginOverlap);
-	OnActorBeginOverlap.AddDynamic(this, &ACSpawnPoint::OnActorEndOverlap);
+	TArray<AActor*> actors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APlayerStart::StaticClass(), actors);
+	PlayerStart = Cast<APlayerStart>(actors[0]);
+
+	OnActorBeginOverlap.AddDynamic(this, &ACSpawnPoint::ActorBeginOverlap);
+	OnActorEndOverlap.AddDynamic(this, &ACSpawnPoint::ActorEndOverlap);
 }
 
 void ACSpawnPoint::OnConstruction(const FTransform& Transform)
@@ -33,7 +38,7 @@ void ACSpawnPoint::Tick(float DeltaTime)
 
 }
 
-void ACSpawnPoint::OnActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+void ACSpawnPoint::ActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	if (HasAuthority() == false) return;
 
@@ -41,11 +46,11 @@ void ACSpawnPoint::OnActorBeginOverlap(AActor* OverlappedActor, AActor* OtherAct
 		OverlappedActors.Add(OtherActor);
 }
 
-void ACSpawnPoint::OnActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
+void ACSpawnPoint::ActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	if (HasAuthority() == false) return;
 
-	if (OverlappedActors.Find(OtherActor) < 0)
+	if (OverlappedActors.Find(OtherActor) >= 0)
 		OverlappedActors.Remove(OtherActor);
 }
 

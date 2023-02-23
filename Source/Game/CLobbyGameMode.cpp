@@ -7,9 +7,9 @@ void ACLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 
 	++NumberOfPlayers;
 
-	if (NumberOfPlayers >= 3)
+	if (NumberOfPlayers >= 2)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Reached 3 Players!"));
+		UE_LOG(LogTemp, Error, TEXT("Reached 2 Players!"));
 
 		GetWorldTimerManager().SetTimer(GameStartTimer, this, &ACLobbyGameMode::StartGame, 10);			
 	}

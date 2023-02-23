@@ -25,10 +25,10 @@ public:
 
 private:
 	UFUNCTION()
-		void OnActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
+		void ActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 
 	UFUNCTION()
-		void OnActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor);
+		void ActorEndOverlap(AActor* OverlappedActor, AActor* OtherActor);
 
 protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
@@ -39,4 +39,6 @@ private:
 		class UCapsuleComponent* Capsule;
 
 	TArray<AActor*> OverlappedActors;
+
+	class APlayerStart* PlayerStart;
 };
